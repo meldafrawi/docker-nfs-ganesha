@@ -4,6 +4,9 @@ set -e
 
 # environment variables
 
+: ${NFS_DISK_IMAGE_SIZE_MB:=1024}
+: ${NFS_DISK_IMAGE_PATH:=/var/nfs-data}
+
 : ${EXPORT_PATH:="/data/nfs"}
 : ${PSEUDO_PATH:="/"}
 : ${EXPORT_ID:=0}
@@ -16,6 +19,14 @@ set -e
 
 : ${GANESHA_CONFIG:="/etc/ganesha/ganesha.conf"}
 : ${GANESHA_LOGFILE:="/dev/stdout"}
+
+
+create_nfs_disk_image(){
+	mkdir -p ${NFS_DISK_IMAGE_PATH}
+	dd if=/dev/zero of="${NFS_DISK_IMAGE_PATH}/data.img" count="${NFS_DISK_IMAGE_SIZE_MB}" bs=1M
+	mkfs.ext4 -F "${NFS_DISK_IMAGE_PATH}/data.img"
+	mount "${NFS_DISK_IMAGE_PATH}/data.img" ${EXPORT_PATH}
+}
 
 init_rpc() {
     echo "* Starting rpcbind"
@@ -79,6 +90,10 @@ sleep 0.5
 if [ ! -f ${EXPORT_PATH} ]; then
     mkdir -p "${EXPORT_PATH}"
 fi
+
+
+echo "Creating NFS disk image with size ${NFS_DISK_IMAGE_SIZE_MB}MB ..."
+create_nfs_disk_image
 
 echo "Initializing Ganesha NFS server"
 echo "=================================="
