@@ -1,0 +1,124 @@
+kind: pipeline
+name: default-amd64
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: fetch
+  image: alpine/git
+  commands:
+  - git fetch --tags
+
+- name: build-amd64
+  image: plugins/docker
+  settings:
+    dry_run: True
+    build_args:
+    - ARCH=amd64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    repo: longhornio/nfs-ganesha
+    tag: "latest-amd64"
+  when:
+    branch:
+    - master
+
+- name: publish-amd64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=amd64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/nfs-ganesha
+    tag: "latest-amd64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - master
+    event:
+    - push
+---
+kind: pipeline
+name: default-arm64
+
+platform:
+  os: linux
+  arch: arm64
+
+steps:
+- name: fetch
+  image: arm64v8/alpine
+  commands:
+  - apk add git
+  - git fetch --tags
+
+- name: build-arm64
+  image: plugins/docker
+  settings:
+    dry_run: True
+    build_args:
+    - ARCH=arm64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    repo: longhornio/nfs-ganesha
+    tag: "latest-arm64"
+  when:
+    branch:
+    - master
+
+- name: publish-arm64-image
+  image: plugins/docker
+  settings:
+    build_args:
+    - ARCH=arm64
+    custom_dns: 1.1.1.1
+    dockerfile: Dockerfile
+    password:
+      from_secret: docker_password
+    repo: longhornio/nfs-ganesha
+    tag: "latest-arm64"
+    username:
+      from_secret: docker_username
+  when:
+    branch:
+    - master
+    event:
+    - push
+---
+kind: pipeline
+name: manifest
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: manifest
+  image: plugins/manifest:1
+  settings:
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    target: "longhornio/nfs-ganesha:latest"
+    template: "longhornio/nfs-ganesha:latest-ARCH"
+  when:
+    instance:
+    - drone-publish.longhorn.io
+    branch:
+    - master
+    event:
+    - push
+
+depends_on:
+- default-amd64
+- default-arm64

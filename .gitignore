@@ -1,5 +1,5 @@
 # Ignore all files and folders in the root
-/*
+#/*
 
 # Allow files/folders using a negation pattern
 # To allow a subfolder and all files/folders below (e.g. foo/bar/baz):
